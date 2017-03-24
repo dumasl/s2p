@@ -311,41 +311,138 @@ def disparity_to_ply(tile):
         common.remove(os.path.join(out_dir, 'pair_1', 'rectified_ref.tif'))
 
 
-def mean_heights(tile):
+def diff_heights(tile):
     """
+    Computes the mean differences between pairs of height map for every tile
+     Say 4 images are within the product, then we are dealing with 3 pairs (1, 2, 3),
+     and this function computes local (meaning inside a tile) mean differences (delta_12, delta_13, delta_23)
+     between (1, 2), (1, 3) and (2, 3) height map couples.
+     Resulting file is named local_diff_heights.txt and contains :
+      delta_12   nbValidPointsForCouple(1,2)
+      delta_13   nbValidPointsForCouple(1,3)
+      delta_23   nbValidPointsForCouple(2,3)
     """
     w, h = tile['coordinates'][2:]
     z = cfg['subsampling_factor']
     n = len(cfg['images']) - 1
-    maps = np.empty((int(h/z), int(w/z), n))
+    maps = np.empty((int(h/z), int(w/z), n*(n-1)/2))
+    k = -1
     for i in range(n):
         try:
             f = gdal.Open(os.path.join(tile['dir'], 'pair_{}'.format(i + 1),
                                        'height_map.tif'))
-            maps[:, :, i] = f.GetRasterBand(1).ReadAsArray()
-            f = None  # this is the gdal way of closing files
+            for j in range(i+1, n):
+                k += 1
+                try:
+                    g = gdal.Open(os.path.join(tile['dir'], 'pair_{}'.format(j + 1),
+                                               'height_map.tif'))
+
+                    maps[:, :, k] = f.GetRasterBand(1).ReadAsArray()
+                    maps[:, :, k] -= g.GetRasterBand(1).ReadAsArray()
+                    # this is the gdal way of closing files
+                    f = None
+                    g = None
+
+                except RuntimeError:  # the file is not there
+                    maps[:, :, k] *= np.nan
+
         except RuntimeError:  # the file is not there
-            maps[:, :, i] *= np.nan
+            maps[:, :, k] *= np.nan
 
-    validity_mask = maps.sum(axis=2)  # sum to propagate nan values
-    validity_mask += 1 - validity_mask  # 1 on valid pixels, and nan on invalid
-
-    # save the n mean height values to a txt file in the tile directory
-    np.savetxt(os.path.join(tile['dir'], 'local_mean_heights.txt'),
-               [np.nanmean(validity_mask * maps[:, :, i]) for i in range(n)])
+    # save the n*(n-1)/2 diff height values to a txt file in the tile directory
+    np.savetxt( os.path.join(tile['dir'], 'local_mean_height_diff.txt'),
+               [ [np.nanmean(maps[:, :, i]), np.count_nonzero(np.isnan(maps[:, :, i]))]
+                for i in range(n*(n-1)/2)] )
 
 
-def global_mean_heights(tiles):
+def global_diff_heights(tiles):
     """
-    """
-    local_mean_heights = [np.loadtxt(os.path.join(t['dir'], 'local_mean_heights.txt'))
-                          for t in tiles]
-    global_mean_heights = np.nanmean(local_mean_heights, axis=0)
-    for i in range(len(cfg['images']) - 1):
-        np.savetxt(os.path.join(cfg['out_dir'],
-                                'global_mean_height_pair_{}.txt'.format(i+1)),
-                   [global_mean_heights[i]])
 
+    """
+    # Reads the local mean differences between pairs of height map (for every tile)
+    local_mean_height_diff = [np.loadtxt(os.path.join(t['dir'], 'local_mean_height_diff.txt'))
+                          for t in tiles if os.path.exists(os.path.join(t['dir'], 'local_mean_height_diff.txt'))]
+
+    # Computes the global mean considering each tile contribution
+    n = len(cfg['images']) - 1
+    m = n*(n-1)/2
+    if m == 1 :
+        delta_weighted = [np.nansum([np.multiply(*local_mean_height_diff[i]) for i in range(len(local_mean_height_diff))])]
+        total_weight = [np.sum([local_mean_height_diff[i][1] for i in range(len(local_mean_height_diff))])]
+    else:
+        delta_weighted = [np.nansum([np.multiply(*local_mean_height_diff[i][j]) for i in range(len(local_mean_height_diff))]) for j in range(n)]
+        total_weight = [np.sum([local_mean_height_diff[i][j][1] for i in range(len(local_mean_height_diff))]) for j in range(n)]
+    delta = np.divide(delta_weighted, total_weight)
+
+    # We now want to compute a more robust global mean from the global mean diff computed pair wise
+    #   As delta_12 has been computed considering only height maps 1 and 2, we want to compute a robust version of
+    #   delta_12 by taking into account not only height maps 1 and 2 but also the others
+    #   One can then easily write D'= PD where :
+    #   -> D' is the global_mean_height_diff vector containing computed deltas
+    #   -> D  is the global_mean_height_diff vector "robustified" by linearly combining computed deltas
+    #   -> P  is the simple change of basis matrix we need to (pseudo-)invert to deduce D
+    #   Now, D does not have to contains all deltas since their linked to each other. Hence, we chose D such that :
+    #   -> D = [R_delta_12, R_delta_23, R_delta_34, ..., R_delta_(N-1)N] with R_delta_ij the robust delta_ij
+    #      (note that the above D is actually the transposition of D)
+    #
+    #   This gives us (considering we have 5 images) :
+    #         D' = PD
+    #   <=>  _         _     _       _
+    #       |           |   |         |
+    #         delta_12         1 0 0     _                                  _ t
+    #         delta_13         1 1 0    |                                    |
+    #         delta_14    =    1 1 1       R_delta_12 R_delta_23 R_delta_24
+    #         delta_23         0 1 0    |_                                  _|
+    #         delta_24         0 1 1
+    #         delta_34         0 0 1
+    #       |_         _|   |_       _|
+    #
+    # Let's compute P noticing its multiple lower triangular shape
+    P = np.zeros((m, n - 1))
+    j = k = 0
+    for i in range(n - 1 , 0, -1):
+        P[j:j+i, k:k+i] = np.tril(np.ones((i,i)))
+        j+=i
+        k+=1
+
+    # We can now (pseudo-)invert P and compute D as (P^-1)(D') = D
+    if m == 1:
+        D = delta
+    else:
+        # TODO EXPLIQUER LA PONDERATION...
+        poids = np.array([np.sum([local_mean_height_diff[i][j][1] for i in range(len(local_mean_height_diff))])
+                          for j in range(n)])
+        P = (P.T * poids).T
+        delta = (delta.T * poids).T
+        D = np.matmul(np.linalg.pinv(P), delta)
+
+    # The whole idea now is to shift every pair of local height map to prepare their fusion along and across tiles
+    #   The shifts are pair-dependant and assumed to bring every pair exactly to the mean height level (all pairs
+    #   included)
+    #   Assuming M stands for this mean height level, we need to compute delta_iM as shifts to apply to every pair i
+    #   If H denotes the highest pair, then we have :
+    #   ->  delta_HM = MEAN_i(delta_Hi)             (by definition of M, and H and where MEAN_i(delta_Hi stands for the
+    #                                                mean value of delta_Hi for every pair i)
+    #   <=> delta_HM = MEAN_i(delta_H1 + delta_1i)  (1 being the pair number 1, which could actually be H)
+    #   <=> delta_HM = delta_H1 + MEAN_i(delta_1i)
+    #   <=> delta_HM - delta_H1 = MEAN_i(delta_1i)
+    #   <=> delta_HM + delta_1H = MEAN_i(delta_1i)
+    #   <=> delta_1M = MEAN_i(delta_1i)
+    #   And we can now deduce every delta_iM knowing only delta_1i for every pair i as
+    #       delta_iM = delta_1M - delta_1i
+    #
+    #                                                                                               t
+    # Let's then compute delta_1i from D = [R_delta_12, R_delta_23, R_delta_34, ..., R_delta_(N-1)N]
+    delta_1i = np.zeros((1,n))
+    delta_1i[0][1:] = np.cumsum(D)
+    # Shifts delta_iM can be deduced :
+    delta_iM = (np.mean(delta_1i)) - delta_1i
+
+    # We can save those shifts
+    for i in range(n):
+            np.savetxt(os.path.join(cfg['out_dir'],
+                                    'global_height_shifts_{}.txt'.format(i+1)),
+                       [delta_iM[0][i]])
 
 def heights_fusion(tile):
     """
@@ -363,16 +460,17 @@ def heights_fusion(tile):
         for img in height_maps:
             common.cargarse_basura(img, img)
 
-    # load global mean heights
-    global_mean_heights = []
+    # load global diff heights
+    global_diff_heights = []
     for i in range(len(cfg['images']) - 1):
         x = np.loadtxt(os.path.join(cfg['out_dir'],
-                                    'global_mean_height_pair_{}.txt'.format(i+1)))
-        global_mean_heights.append(x)
+                                    'global_height_shifts_{}.txt'.format(i+1)))
+        global_diff_heights.append(x)
 
-    # merge the height maps (applying mean offset to register)
+    # merge the height maps (applying diff offset to register)
+    print("appel a fusion.merge_n")
     fusion.merge_n(os.path.join(tile_dir, 'height_map.tif'), height_maps,
-                   global_mean_heights, averaging=cfg['fusion_operator'],
+                   global_diff_heights, averaging=cfg['fusion_operator'],
                    threshold=cfg['fusion_thresh'])
 
     if cfg['clean_intermediate']:
@@ -618,11 +716,11 @@ def main(user_cfg, steps=ALL_STEPS):
             parallel.launch_calls(disparity_to_height, tiles_pairs, nb_workers)
 
             print('computing local pairwise height offsets...')
-            parallel.launch_calls(mean_heights, tiles, nb_workers)
+            parallel.launch_calls(diff_heights, tiles, nb_workers)
 
         if 'global-mean-heights' in steps:
             print('computing global pairwise height offsets...')
-            global_mean_heights(tiles)
+            global_diff_heights(tiles)
 
         if 'heights-to-ply' in steps:
             print('merging height maps and computing point clouds...')
