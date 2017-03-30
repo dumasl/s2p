@@ -351,7 +351,8 @@ def diff_heights(tile):
 
     # save the n*(n-1)/2 diff height values to a txt file in the tile directory
     np.savetxt( os.path.join(tile['dir'], 'local_mean_height_diff.txt'),
-               [ [np.nanmean(maps[:, :, i])] for i in range(n*(n-1)/2)] )
+               [ [np.nanmean(maps[:, :, i]), np.count_nonzero(~np.isnan(maps[:, :, i]))]
+                for i in range(n*(n-1)/2)] )
 
 
 def global_diff_heights(tiles):
@@ -366,11 +367,16 @@ def global_diff_heights(tiles):
     # This median is somehow weighted by each tile contribution (which is its number of not nan values)
     n = len(cfg['images']) - 1
     m = n*(n-1)/2
+    # We stack the local mean height diff (LMHD) list
     delta=[]
+    stacked_LMHD_list = np.vstack(local_mean_height_diff)
     for i in range(m):
-        array_i_sorted=np.array(sorted(np.vstack(local_mean_height_diff)[i::m], key=lambda x:x[0]))
-        cumul_sum_i = np.cumsum(array_i_sorted, axis=0)[:,1]
-        delta.append(array_i_sorted[np.argmax(cumul_sum_i > (cumul_sum_i[::-1][0] / 2))][0])
+        sub_stacked_LMHD_list = stacked_LMHD_list[i::m]
+        nan_free_sub_stacked_LMHD_list = [sub_stacked_LMHD_list[j] for j in range(len(sub_stacked_LMHD_list))
+                                                                       if not np.isnan(sub_stacked_LMHD_list[j][0])]
+        sorted_LMHD_array=np.array(sorted(nan_free_sub_stacked_LMHD_list, key=lambda x:x[0]))
+        cumul_sum = np.cumsum(sorted_LMHD_array, axis=0)[:,1]
+        delta.append(sorted_LMHD_array[np.argmax(cumul_sum > (cumul_sum[::-1][0] / 2))][0])
     delta = np.array(delta)
 
     # We now want to compute a more robust global mean from the global mean diff computed pair wise
