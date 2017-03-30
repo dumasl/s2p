@@ -362,10 +362,16 @@ def global_diff_heights(tiles):
     local_mean_height_diff = [np.loadtxt(os.path.join(t['dir'], 'local_mean_height_diff.txt'))
                           for t in tiles if os.path.exists(os.path.join(t['dir'], 'local_mean_height_diff.txt'))]
 
-    # Computes the median of each tile contribution
+    # Computes the median of all local deltas computed by tile
+    # This median is somehow weighted by each tile contribution (which is its number of not nan values)
     n = len(cfg['images']) - 1
     m = n*(n-1)/2
-    delta = np.nanmedian(local_mean_height_diff, axis=0)
+    delta=[]
+    for i in range(m):
+        array_i_sorted=np.array(sorted(np.vstack(local_mean_height_diff)[i::m], key=lambda x:x[0]))
+        cumul_sum_i = np.cumsum(array_i_sorted, axis=0)[:,1]
+        delta.append(array_i_sorted[np.argmax(cumul_sum_i > (cumul_sum_i[::-1][0] / 2))][0])
+    delta = np.array(delta)
 
     # We now want to compute a more robust global mean from the global mean diff computed pair wise
     #   As delta_12 has been computed considering only height maps 1 and 2, we want to compute a robust version of
@@ -402,6 +408,12 @@ def global_diff_heights(tiles):
     if m == 1:
         D = delta
     else:
+        # Here again the number of valid points associated with deltas computation is considered as they are combined
+        # linearly
+        weights = np.array([np.sum([local_mean_height_diff[i][j][1] for i in range(len(local_mean_height_diff))])
+                          for j in range(n)])
+        P = (P.T * weights).T
+        delta = (delta.T * weights).T
         D = np.matmul(np.linalg.pinv(P), delta)
 
     # The whole idea now is to shift every pair of local height map to prepare their fusion along and across tiles
