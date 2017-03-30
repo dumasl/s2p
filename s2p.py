@@ -351,8 +351,7 @@ def diff_heights(tile):
 
     # save the n*(n-1)/2 diff height values to a txt file in the tile directory
     np.savetxt( os.path.join(tile['dir'], 'local_mean_height_diff.txt'),
-               [ [np.nanmean(maps[:, :, i]), np.count_nonzero(np.isnan(maps[:, :, i]))]
-                for i in range(n*(n-1)/2)] )
+               [ [np.nanmean(maps[:, :, i])] for i in range(n*(n-1)/2)] )
 
 
 def global_diff_heights(tiles):
@@ -363,16 +362,10 @@ def global_diff_heights(tiles):
     local_mean_height_diff = [np.loadtxt(os.path.join(t['dir'], 'local_mean_height_diff.txt'))
                           for t in tiles if os.path.exists(os.path.join(t['dir'], 'local_mean_height_diff.txt'))]
 
-    # Computes the global mean considering each tile contribution
+    # Computes the median of each tile contribution
     n = len(cfg['images']) - 1
     m = n*(n-1)/2
-    if m == 1 :
-        delta_weighted = [np.nansum([np.multiply(*local_mean_height_diff[i]) for i in range(len(local_mean_height_diff))])]
-        total_weight = [np.sum([local_mean_height_diff[i][1] for i in range(len(local_mean_height_diff))])]
-    else:
-        delta_weighted = [np.nansum([np.multiply(*local_mean_height_diff[i][j]) for i in range(len(local_mean_height_diff))]) for j in range(n)]
-        total_weight = [np.sum([local_mean_height_diff[i][j][1] for i in range(len(local_mean_height_diff))]) for j in range(n)]
-    delta = np.divide(delta_weighted, total_weight)
+    delta = np.nanmedian(local_mean_height_diff, axis=0)
 
     # We now want to compute a more robust global mean from the global mean diff computed pair wise
     #   As delta_12 has been computed considering only height maps 1 and 2, we want to compute a robust version of
@@ -409,11 +402,6 @@ def global_diff_heights(tiles):
     if m == 1:
         D = delta
     else:
-        # TODO EXPLIQUER LA PONDERATION...
-        poids = np.array([np.sum([local_mean_height_diff[i][j][1] for i in range(len(local_mean_height_diff))])
-                          for j in range(n)])
-        P = (P.T * poids).T
-        delta = (delta.T * poids).T
         D = np.matmul(np.linalg.pinv(P), delta)
 
     # The whole idea now is to shift every pair of local height map to prepare their fusion along and across tiles
