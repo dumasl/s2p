@@ -340,13 +340,16 @@ def diff_heights(tile):
                     maps[:, :, k] = f.GetRasterBand(1).ReadAsArray()
                     maps[:, :, k] -= g.GetRasterBand(1).ReadAsArray()
                     # this is the gdal way of closing files
-                    f = None
                     g = None
 
                 except RuntimeError:  # the file is not there
                     maps[:, :, k] *= np.nan
 
+            # this is the gdal way of closing files
+            f = None
+
         except RuntimeError:  # the file is not there
+            k+=1
             maps[:, :, k] *= np.nan
 
     # save the n*(n-1)/2 diff height values to a txt file in the tile directory
