@@ -349,7 +349,7 @@ def diff_heights(tile):
             f = None
 
         except RuntimeError:  # the file is not there
-            k+=1
+            k += 1
             maps[:, :, k] *= np.nan
 
     # save the n*(n-1)/2 diff height values to a txt file in the tile directory
@@ -374,20 +374,24 @@ def global_diff_heights(tiles):
     delta=[]
     stacked_LMHD_list = np.vstack(local_mean_height_diff)
     for i in range(m):
+        # Only the contributions of the concerned delta over tiles is kept
         sub_stacked_LMHD_list = stacked_LMHD_list[i::m]
         nan_free_sub_stacked_LMHD_list = [sub_stacked_LMHD_list[j] for j in range(len(sub_stacked_LMHD_list))
                                                                        if not np.isnan(sub_stacked_LMHD_list[j][0])]
+        # Now we perform our "weighted" median by firstly sorting out delta contributions
         sorted_LMHD_array=np.array(sorted(nan_free_sub_stacked_LMHD_list, key=lambda x:x[0]))
+        # then computed cumul_sum of the number of valid points for each tile contribution
         cumul_sum = np.cumsum(sorted_LMHD_array, axis=0)[:,1]
+        # and eventually we find the delta value corresponding to the "median"
         delta.append(sorted_LMHD_array[np.argmax(cumul_sum > (cumul_sum[::-1][0] / 2))][0])
     delta = np.array(delta)
 
-    # We now want to compute a more robust global mean from the global mean diff computed pair wise
+    # We now want to compute more robust deltas from the deltas we just computed pair wise
     #   As delta_12 has been computed considering only height maps 1 and 2, we want to compute a robust version of
     #   delta_12 by taking into account not only height maps 1 and 2 but also the others
-    #   One can then easily write D'= PD where :
-    #   -> D' is the global_mean_height_diff vector containing computed deltas
-    #   -> D  is the global_mean_height_diff vector "robustified" by linearly combining computed deltas
+    #   One can then easily writes D'= PD where :
+    #   -> D' is a vector containing computed deltas
+    #   -> D  is a vector of deltas "robustified" by linearly combining computed deltas
     #   -> P  is the simple change of basis matrix we need to (pseudo-)invert to deduce D
     #   Now, D does not have to contains all deltas since their linked to each other. Hence, we chose D such that :
     #   -> D = [R_delta_12, R_delta_23, R_delta_34, ..., R_delta_(N-1)N] with R_delta_ij the robust delta_ij
@@ -430,7 +434,7 @@ def global_diff_heights(tiles):
     #   included)
     #   Assuming M stands for this mean height level, we need to compute delta_iM as shifts to apply to every pair i
     #   If H denotes the highest pair, then we have :
-    #   ->  delta_HM = MEAN_i(delta_Hi)             (by definition of M, and H and where MEAN_i(delta_Hi stands for the
+    #   ->  delta_HM = MEAN_i(delta_Hi)             (by definition of M, and H and where MEAN_i(delta_Hi) stands for the
     #                                                mean value of delta_Hi for every pair i)
     #   <=> delta_HM = MEAN_i(delta_H1 + delta_1i)  (1 being the pair number 1, which could actually be H)
     #   <=> delta_HM = delta_H1 + MEAN_i(delta_1i)
@@ -455,26 +459,28 @@ def global_diff_heights(tiles):
 
 def heights_fusion(tile):
     """
-    Merge the height maps computed for each image pair and generate a ply cloud.
+    Merges the height maps computed for each image pair and generates a ply cloud.
 
     Args:
         tile: a dictionary that provides all you need to process a tile
     """
     tile_dir = tile['dir']
-    height_maps = [os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
-                   for i in range(len(cfg['images']) - 1)]
+    height_maps = []
+    global_diff_heights = []
+
+    for i in range(len(cfg['images']) - 1):
+        height_map = os.path.join(tile_dir, 'pair_%d' % (i + 1), 'height_map.tif')
+        if os.path.exists(height_map):
+            height_maps.append(height_map)
+            # load global diff heights
+            x = np.loadtxt(os.path.join(cfg['out_dir'],
+                                        'global_height_shifts_{}.txt'.format(i + 1)))
+            global_diff_heights.append(x)
 
     # remove spurious matches
     if cfg['cargarse_basura']:
         for img in height_maps:
             common.cargarse_basura(img, img)
-
-    # load global diff heights
-    global_diff_heights = []
-    for i in range(len(cfg['images']) - 1):
-        x = np.loadtxt(os.path.join(cfg['out_dir'],
-                                    'global_height_shifts_{}.txt'.format(i+1)))
-        global_diff_heights.append(x)
 
     # merge the height maps (applying diff offset to register)
     print("appel a fusion.merge_n")
