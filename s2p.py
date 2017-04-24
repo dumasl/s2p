@@ -355,7 +355,7 @@ def diff_heights(tile):
     # save the n*(n-1)/2 diff height values to a txt file in the tile directory
     np.savetxt( os.path.join(tile['dir'], 'local_mean_height_diff.txt'),
                [ [np.nanmean(maps[:, :, i]), np.count_nonzero(~np.isnan(maps[:, :, i]))]
-                for i in range(n*(n-1)/2)] )
+                for i in range(int(n*(n-1)/2))] )
 
 
 def global_diff_heights(tiles):
@@ -369,7 +369,7 @@ def global_diff_heights(tiles):
     # Computes the median of all local deltas computed by tile
     # This median is somehow weighted by each tile contribution (which is its number of not nan values)
     n = len(cfg['images']) - 1
-    m = n*(n-1)/2
+    m = int(n*(n-1)/2)
     # We stack the local mean height diff (LMHD) list
     delta=[]
     stacked_LMHD_list = np.vstack(local_mean_height_diff)
