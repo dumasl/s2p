@@ -52,6 +52,13 @@ cfg['skip_existing'] = False
 # resolution of the output digital surface model, in meters per pixel
 cfg['dsm_resolution'] = 4
 
+# radius to compute altitudes (and to interpolate the small holes)
+cfg['dsm_radius'] = 0
+
+# dsm_sigma controls the spread of the blob from each point for the dsm computation
+# (dsm_resolution by default)
+cfg['dsm_sigma'] = None
+
 # zoom out applied to input images
 cfg['subsampling_factor'] = 1
 
@@ -69,6 +76,12 @@ cfg['n_gcp_per_axis'] = 5
 
 # max distance allowed for a point to the epipolar line of its match
 cfg['epipolar_thresh'] = 0.5
+
+# triangulation mode : 'pairwise'or 'geometric'
+cfg['triangulation_mode'] = 'pairwise'
+
+# use global pointing for geometric triangulation
+cfg['use_global_pointing_for_geometric_triangulation'] = False
 
 # stereo matching algorithm: 'tvl1', 'msmw', 'hirschmuller08',
 # hirschmuller08_laplacian', 'sgbm', 'mgm'

@@ -1,10 +1,12 @@
 {
-  "out_dir" : "../../testoutput/output_pair",
+  "out_dir" : "../../testoutput/output_triplet_geo",
   "images" : [
+    { "img" : "img_02.tif",
+      "rpc" : "rpc_02.xml" },
     { "img" : "img_01.tif",
       "rpc" : "rpc_01.xml" },
-    { "img" : "img_02.tif",
-      "rpc" : "rpc_02.xml" }
+    { "img" : "img_03.tif",
+      "rpc" : "rpc_03.xml"}
     ],
   "roi" : {
       "x" : 150,
@@ -34,5 +36,6 @@
   "skip_existing" : false,
   "msk_erosion": 0,
   "dsm_resolution": 0.5,
-  "utm_bbx" : [359746.062, 360105.562,7651554.000,7651923.000]
+  "utm_bbx" : [698053.031, 698485.531, 4792556.569, 4792984.069],
+  "triangulation_mode" : "geometric"
 }
