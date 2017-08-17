@@ -24,6 +24,7 @@ import numpy as np
 import datetime
 
 
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import s2p
 from s2plib.config import cfg
 from s2plib import common
@@ -80,7 +81,8 @@ def main(user_cfg):
     initialization.build_cfg(user_cfg)
 
     tw, th = initialization.adjust_tile_size()
-    tiles = initialization.tiles_full_info(tw, th)
+    tiles_txt = os.path.join(cfg['out_dir'],'tiles.txt')
+    tiles = initialization.tiles_full_info(tw, th, tiles_txt)
 
     # generate svg tile map
     write_svg_tilemap(os.path.join(cfg['out_dir'],'tiles.svg'), cfg, tiles)
