@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 
 # s2p - Satellite Stereo Pipeline
@@ -430,12 +431,14 @@ def multidisparities_to_ply(tile):
     # compute the point cloud
     triangulation.multidisp_map_to_point_cloud(ply_file, disp_list, rpc_ref, rpc_list,
                                                colors,
+                                               cfg['netcdf'],
                                                utm_zone=cfg['utm_zone'],
                                                llbbx=tuple(cfg['ll_bbx']),
                                                xybbx=(x, x+w, y, y+h))
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
-    common.run("plyextrema %s %s" % (ply_file, plyextrema))
+    if not cfg['netcdf']:
+        common.run("plyextrema %s %s" % (ply_file, plyextrema))
 
     if cfg['clean_intermediate']:
         common.remove(colors)
@@ -537,7 +540,7 @@ def heights_to_ply(tile):
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-        
+
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
                                             utm_zone=cfg['utm_zone'],
@@ -666,6 +669,15 @@ def main(user_cfg, steps=ALL_STEPS):
     initialization.build_cfg(user_cfg)
     if 'initialisation' in steps:
         initialization.make_dirs()
+
+    if cfg['netcdf']:
+        ALL_STEPS = [('initialisation', False),
+                     ('local-pointing', True),
+                     ('global-pointing', False),
+                     ('rectification', True),
+                     ('matching', True),
+                     ('triangulation', True)]
+        steps = collections.OrderedDict(ALL_STEPS)
 
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
@@ -811,3 +823,5 @@ if __name__ == '__main__':
     # Backup input file for sanity check
     if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
         shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))
+
+

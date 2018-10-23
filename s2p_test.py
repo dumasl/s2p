@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python
 
 # s2p (Satellite Stereo Pipeline) testing module
@@ -261,6 +262,26 @@ def end2end_mosaic(config,ref_height_map,absmean_tol=0.025,percentile_tol=1.):
 
     end2end_compare_dsm(computed,expected,absmean_tol,percentile_tol)
 
+def unit_createNetcdf(config):
+
+    test_cfg = s2p.read_config_file(config)
+    outdir = test_cfg['out_dir']
+    test_cfg['skip_existing'] = True
+    s2p.main(test_cfg)
+
+    tiles_file = os.path.join(outdir, 'tiles.txt')
+    nb_netcdf = 0
+    nb_tiles = 0
+    with open(tiles_file, 'r') as file:
+        tile = file.readline()
+        tile_path = os.path.join(outdir, tile)
+        netcdfTile = os.path.join(os.path.dirname(tile_path), "cloud3D_image.nc")
+        nb_tiles = nb_tiles + 1
+        if os.path.exists(netcdfTile):
+            nb_netcdf = nb_netcdf + 1
+
+    assert(nb_netcdf == nb_tiles)
+
 
 ############### Registered tests #######################
 
@@ -274,7 +295,8 @@ registered_tests = [('unit_gdal_version', (unit_gdal_version,[])),
                     ('end2end_cluster', (end2end_cluster, ['testdata/input_triplet/config.json'])),
                     ('end2end_mosaic', (end2end_mosaic, ['testdata/input_triplet/config.json','testdata/expected_output/triplet/height_map.tif',0.05,2])),
                     ('end2end_geometric', (end2end, ['testdata/input_triplet/config_geo.json', 'testdata/expected_output/triplet/dsm_geo.tif',0.05,2])),
-                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['testdata/input_triplet/config.json']))]
+                    ('unit_distributed_plyflatten', (unit_distributed_plyflatten, ['testdata/input_triplet/config.json'])),
+                    ('unit_createNetcdf', (unit_createNetcdf, ['testdata/netcdf/config.json']))]
 
 registered_tests = collections.OrderedDict(registered_tests)
 
@@ -341,3 +363,5 @@ if __name__ == '__main__':
         for test in failed:
             print('\t'+test)
         exit(1)
+
+

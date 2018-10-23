@@ -124,7 +124,7 @@ def disp_map_to_point_cloud(out, disp, mask, rpc1, rpc2, H1, H2, A, colors,
     command += ' {} {} {} {}'.format(utm, lbb, xbb, msk)
     common.run(command)
 
-def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors,
+def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors, netcdf=False,
                                  utm_zone=None, llbbx=None, xybbx=None):
     """
     Computes a 3D point cloud from N disparity maps.
@@ -149,6 +149,8 @@ def multidisp_map_to_point_cloud(out, disp_list, rpc_ref, rpc_list, colors,
                                                     " ".join(rpc_command))
     command += ' --color {}'.format(colors)
     command += ' {} {} {}'.format(utm, lbb, xbb)
+    if(netcdf):
+        command += ' --netcdf'
     common.run(command)
 
 def height_map_to_point_cloud(cloud, heights, rpc, H=None, crop_colorized='',
