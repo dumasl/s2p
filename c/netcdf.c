@@ -1,4 +1,3 @@
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,11 +5,10 @@
 #include <netcdf.h>
 #include "netcdf.h"
 
-double min(int * tab, int size) {
-    double min = tab[0];
-    for(int i=1; i<size; i++)
+double min(int * tab, int size, double min) {
+    for(int i=0; i<size; i++)
     {
-        if(tab[i]<min)
+        if(tab[i]<min && tab[i]!=0.0)
             min = tab[i];
     }
     return min;
@@ -31,15 +29,15 @@ void writeExtent(char * extent_path, int w, int h, int * coord_x, int * coord_y)
     double xmin, xmax, ymin, ymax;
     int size = w * h;
 
-    xmin = min(coord_x, size);
     xmax = max(coord_x, size);
-    ymin = min(coord_y, size);
+    xmin = min(coord_x, size, xmax);
     ymax = max(coord_y, size);
+    ymin = min(coord_y, size, ymax);
 
     FILE *f = fopen(extent_path, "w");
-    fprintf(f, "%lf %lf %lf %lf\n", xmin, ymin, xmax, ymax);
-    fprintf(f, "%d %d %d %d", 0, 0, w, h);
-    fclose(f);
+	fprintf(f, "%lf %lf %lf %lf\n", xmin, xmax, ymin, ymax);
+	fprintf(f, "%d %d %d %d", 0, 0, w, h);
+	fclose(f);
 }
 
 // Create a netcdf file
@@ -295,4 +293,3 @@ int writeNetCDFFile(const char * netcdfFile, int width, int height, int *ecef, t
 
    return 0;
 }
-
