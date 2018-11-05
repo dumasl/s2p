@@ -162,7 +162,7 @@ $(BINDIR)/netcdf: c/netcdf.c c/netcdf.h
 	$(CC) $(CFLAGS) -lm -lnetcdf -c $< -lm -o $@
 
 $(BINDIR)/multidisp2ply: 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/triangulation.o $(SRCDIR)/coordconvert.o $(BINDIR)/netcdf c/multidisp2ply.c c/vvector.h 3rdparty/iio/iio.h c/rpc.h c/triangulation.h c/coordconvert.h c/read_matrix.c $(SRCDIR)/netcdf.h
-	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/triangulation.o $(SRCDIR)/coordconvert.o $(SRCDIR)/netcdf.o c/multidisp2ply.c $(IIOLIBS) -lnetcdf -lGeographic -o $@
+	$(CC) $(CFLAGS) 3rdparty/iio/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o $(SRCDIR)/triangulation.o $(SRCDIR)/coordconvert.o $(SRCDIR)/netcdf.c c/multidisp2ply.c $(IIOLIBS) -lnetcdf -lGeographic -o $@
 
 $(BINDIR)/disp2ply: $(SRCDIR)/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c c/fail.c c/rpc.h c/read_matrix.c c/smapa.h
 	$(CC) $(CFLAGS) c/iio.o $(SRCDIR)/rpc.o $(SRCDIR)/geographiclib_wrapper.o c/disp2ply.c $(IIOLIBS) $(LDLIBS) -lGeographic -o $@
