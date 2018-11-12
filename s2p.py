@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 
 # s2p - Satellite Stereo Pipeline
@@ -670,15 +669,6 @@ def main(user_cfg, steps=ALL_STEPS):
     if 'initialisation' in steps:
         initialization.make_dirs()
 
-    if cfg['netcdf']:
-        ALL_STEPS = [('initialisation', False),
-                     ('local-pointing', True),
-                     ('global-pointing', False),
-                     ('rectification', True),
-                     ('matching', True),
-                     ('triangulation', True)]
-        steps = collections.OrderedDict(ALL_STEPS)
-
     # multiprocessing setup
     nb_workers = multiprocessing.cpu_count()  # nb of available cores
     if cfg['max_processes']:
@@ -745,11 +735,14 @@ def main(user_cfg, steps=ALL_STEPS):
             else:
                 raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
 
-    if 'local-dsm-rasterization' in steps:
+    # When netcdf is setting to true and the choosen triangulation mode is the geometric one,
+    # the PLY cloud is not created and the pipeline stops at the triangulation step.
+    # For result, the dsm is not created as well.
+    if 'local-dsm-rasterization' in steps and not (cfg['netcdf'] and cfg['triangulation_mode'] == 'geometric'):
         print('computing DSM by tile...')
         parallel.launch_calls(plys_to_dsm, tiles, nb_workers)
 
-    if 'global-dsm-rasterization' in steps:
+    if 'global-dsm-rasterization' in steps and not (cfg['netcdf'] and cfg['triangulation_mode'] == 'geometric'):
         print('computing global DSM...')
         global_dsm(tiles)
         common.print_elapsed_time()
@@ -823,5 +816,4 @@ if __name__ == '__main__':
     # Backup input file for sanity check
     if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
         shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))
-
 
