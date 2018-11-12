@@ -124,3 +124,6 @@ cfg['cargarse_basura'] = True
 
 # longitude/latitude bounding box
 cfg['ll_bbx'] = ("-inf", "inf", "-inf", "inf")
+
+# create a 3D output image in netcdf
+cfg['netcdf'] = False

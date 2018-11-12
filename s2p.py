@@ -430,12 +430,14 @@ def multidisparities_to_ply(tile):
     # compute the point cloud
     triangulation.multidisp_map_to_point_cloud(ply_file, disp_list, rpc_ref, rpc_list,
                                                colors,
+                                               cfg['netcdf'],
                                                utm_zone=cfg['utm_zone'],
                                                llbbx=tuple(cfg['ll_bbx']),
                                                xybbx=(x, x+w, y, y+h))
 
     # compute the point cloud extrema (xmin, xmax, xmin, ymax)
-    common.run("plyextrema %s %s" % (ply_file, plyextrema))
+    if not cfg['netcdf']:
+        common.run("plyextrema %s %s" % (ply_file, plyextrema))
 
     if cfg['clean_intermediate']:
         common.remove(colors)
@@ -537,7 +539,7 @@ def heights_to_ply(tile):
     else:
         common.image_qauto(common.image_crop_gdal(cfg['images'][0]['img'], x, y,
                                                  w, h), colors)
-        
+
     triangulation.height_map_to_point_cloud(plyfile, height_map,
                                             cfg['images'][0]['rpc'], H, colors,
                                             utm_zone=cfg['utm_zone'],
@@ -733,11 +735,14 @@ def main(user_cfg, steps=ALL_STEPS):
             else:
                 raise ValueError("possible values for 'triangulation_mode' : 'pairwise' or 'geometric'")
 
-    if 'local-dsm-rasterization' in steps:
+    # When netcdf is setting to true and the choosen triangulation mode is the geometric one,
+    # the PLY cloud is not created and the pipeline stops at the triangulation step.
+    # For result, the dsm is not created as well.
+    if 'local-dsm-rasterization' in steps and not (cfg['netcdf'] and cfg['triangulation_mode'] == 'geometric'):
         print('computing DSM by tile...')
         parallel.launch_calls(plys_to_dsm, tiles, nb_workers)
 
-    if 'global-dsm-rasterization' in steps:
+    if 'global-dsm-rasterization' in steps and not (cfg['netcdf'] and cfg['triangulation_mode'] == 'geometric'):
         print('computing global DSM...')
         global_dsm(tiles)
         common.print_elapsed_time()
@@ -811,3 +816,4 @@ if __name__ == '__main__':
     # Backup input file for sanity check
     if not args.config.startswith(os.path.abspath(cfg['out_dir']+os.sep)):
         shutil.copy2(args.config,os.path.join(cfg['out_dir'],'config.json.orig'))
+

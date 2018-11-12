@@ -1,3 +1,4 @@
+
 # S2P - Satellite Stereo Pipeline
 
 [![Build Status](https://travis-ci.org/MISS3D/s2p.svg?branch=master)](https://travis-ci.org/MISS3D/s2p)
@@ -70,7 +71,7 @@ Required dependencies (Ubuntu 16.04):
 
     add-apt-repository -y ppa:ubuntugis/ppa  # The repository is added so that the version >= 2.1 of gdal is installed (requirement)
     apt-get update
-    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip
+    apt-get install build-essential cmake gdal-bin geographiclib-tools libgeographic-dev libfftw3-dev libgdal-dev libgeotiff-dev libtiff5-dev python python-gdal python-numpy python-pip libnetcdf-dev
 
 and
 
@@ -135,3 +136,5 @@ Meinhardt-Llopis, Julien Michel, Jean-Michel Morel, Gabriele Facciolo.  ICIP
 images*](http://dx.doi.org/10.1109/IGARSS.2014.6946762), Carlo de Franchis,
 Enric Meinhardt-Llopis, Julien Michel, Jean-Michel Morel, Gabriele Facciolo.
 IGARSS 2014.
+
+

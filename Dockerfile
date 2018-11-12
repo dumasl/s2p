@@ -1,3 +1,4 @@
+
 # docker for s2p
 # Carlo de Franchis <carlodef@gmail.com>
 
@@ -18,13 +19,14 @@ RUN apt-get update && apt-get install -y \
     python-pip \
     cmake \
     software-properties-common \
-    python-software-properties
+    python-software-properties \
+    libnetcdf-dev
 RUN pip install -U pip
 RUN pip install utm bs4 lxml requests
 
 # Install GDAL 2.x from ubuntugis-stable
 RUN apt-get install dialog apt-utils -y
-RUN add-apt-repository ppa:ubuntugis/ppa -y 
+RUN add-apt-repository ppa:ubuntugis/ppa -y
 RUN apt-get update && apt-get install -y \
     gdal-bin \
     python-gdal
@@ -34,3 +36,5 @@ RUN git clone https://github.com/MISS3D/s2p.git --recursive
 RUN cd s2p && make all
 
 WORKDIR /s2p
+
+

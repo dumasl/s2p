@@ -1,0 +1,38 @@
+{
+ "out_dir" : "../../testoutput/netcdf",
+  "images" : [
+    { "img" : "../input_triplet/img_02.tif",
+      "rpc" : "../input_triplet/rpc_02.xml" },
+    { "img" : "../input_triplet/img_01.tif",
+      "rpc" : "../input_triplet/rpc_01.xml" },
+    { "img" : "../input_triplet/img_03.tif",
+      "rpc" : "../input_triplet/rpc_03.xml"}
+    ],
+  "roi" : {
+      "x" : 150,
+      "y" : 150,
+      "w" : 700,
+      "h" : 700
+  },
+  "full_img" : false,
+  "matching_algorithm" : "mgm",
+  "triangulation_mode": "geometric",
+  "horizontal_margin": 20,
+  "vertical_margin": 5,
+  "sift_match_thresh" : 0.6,
+  "disp_range_extra_margin" : 0.2,
+  "n_gcp_per_axis" : 5,
+  "epipolar_thresh" : 0.5,
+  "debug" : false,
+  "temporary_dir" : "/tmp",
+  "tile_size" : 300,
+  "clean_tmp" : true,
+  "clean_intermediate" : false,
+  "fusion_thresh" : 3,
+  "disp_range_method" : "srtm",
+  "skip_existing" : false,
+  "msk_erosion": 0,
+  "dsm_resolution": 0.5,
+  "netcdf": true
+}
+

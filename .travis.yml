@@ -1,3 +1,4 @@
+
 language: python
 sudo: required
 fast_finish: true
@@ -21,7 +22,7 @@ before_install:
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo rm -vf /etc/apt/sources.list.d/*riak*; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-add-repository -y ppa:ubuntugis/ppa; fi
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get -qq update; fi
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev geographiclib-tools libgeographiclib-dev; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then sudo apt-get install gdal-bin libfftw3-dev libgdal-dev libgeotiff-dev geographiclib-tools libgeographiclib-dev libnetcdf-dev; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew unlink gdal && (brew install gcc || brew link --overwrite gcc) && brew install geographiclib fftw; fi
 
 install:
@@ -36,3 +37,5 @@ script:
   - make
   - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then python -u s2p_test.py --all; fi
   - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then python2 -u s2p_test.py --all; fi
+
+
